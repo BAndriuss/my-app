@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+.marker-icon {
+    width: 40px;
+    height: 40px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    display: block;
+    transform: translate(-50%, -100%); /* center over lat/lng */
+  }
+  
+  /* Custom per type */
+  .rail {
+    background-image: url('/rail.png');
+  }
+  
+  .park {
+    background-image: url('/park.png');
+  }
+  
+  .box {
+    background-image: url('/box.png');
+  }
+  
+  .stairs {
+    background-image: url('/stairs.png');
+  }
+
+  @keyframes popIn {
+    0% {
+        width: 0px;
+        height: 0px;
+      opacity: 0;
+    }
+    80% {
+        width: 40px;
+        height: 40px;
+      opacity: 1;
+    }
+    100% {
+        width: 40px;
+        height: 40px;
+      
+    }
+  }
+
+  .marker {
+    display: block;
+    border: none;
+    padding: 0;
+    animation: popIn 0.4s ease forwards;
+  }
