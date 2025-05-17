@@ -10,6 +10,7 @@ import { Feature } from 'geojson';
 import SpotList from '../components/Spotlist';
 import AttendButton from './AttendButton'
 import SpotAttendance from './SpotAttendance'
+import DeleteButton from './DeleteButton';
 
 // 🌍 ADD THIS FUNCTION
 function getDistanceFromLatLonInMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -672,13 +673,13 @@ export default function MyMap() {
             />
           </div>
 
-          {selectedSpot.user_id === currentUserId && (
-            <button
-              onClick={handleDeleteSpot}
-              className="mt-4 bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded w-full font-bold"
-            >
-              🗑️ Delete Spot
-            </button>
+          {currentUserId === selectedSpot.user_id && (
+            <div className="mt-4">
+              <DeleteButton
+                onDelete={handleDeleteSpot}
+                itemName="spot"
+              />
+            </div>
           )}
         </div>
       )}

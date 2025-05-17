@@ -1,6 +1,9 @@
 'use client'
 import { Dispatch, SetStateAction } from 'react';
 import { useEffect, useMemo } from 'react';
+import { useState } from 'react';
+import SpotCard from './SpotCard';
+import { supabase } from '../../lib/supabaseClient';
 
 interface Spot {
   id: string;
@@ -34,8 +37,6 @@ interface SpotListProps {
     cities: string[];
     isLoadingAddresses: boolean;
 }
-
-import { useState } from 'react';
 
 // Simple distance calculator (haversine formula)
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -83,6 +84,17 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
     { value: 'popular', label: '3+ People' },
     { value: 'empty', label: 'No Attendees' }
   ];
+
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  // Fetch current user on mount
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setCurrentUserId(session?.user?.id || null);
+    };
+    fetchUser();
+  }, []);
 
   // Memoize the getSpotAttendanceInfo function
   const getSpotAttendanceInfo = useMemo(() => (spotId: string) => {
@@ -176,7 +188,7 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
 
   // Debug pagination
   const paginatedSpots = useMemo(() => {
-    const spotsPerPage = 10;
+    const spotsPerPage = 6;
     const start = (currentPage - 1) * spotsPerPage;
     const end = start + spotsPerPage;
     const paginated = filteredSpots.slice(start, end);
@@ -207,48 +219,43 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
   return (
     <div className="p-4">
       <div className="mb-4 space-y-2">
-        <input
-          type="text"
-          placeholder="Search spots..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full p-2 border rounded"
-        />
-        
-        <div className="grid grid-cols-2 gap-2">
+        <div className="mb-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <input
+            type="text"
+            placeholder="Search spots..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="p-2 border rounded font-bebas"
+          />
+          
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
-            className="p-2 border rounded"
+            className="p-2 border rounded font-bebas"
           >
             <option value="all">All Types</option>
-            <option value="skatepark">🛹 Skatepark</option>
-            <option value="rail">➖ Rail</option>
-            <option value="stairs">🪜 Stairs</option>
-            <option value="ledge">🔲 Ledge</option>
-            <option value="flatbar">➖ Flatbar</option>
+            <option value="rail">Rail</option>
+            <option value="stairs">Stairs</option>
+            <option value="park">Park</option>
+            <option value="box">Box</option>
           </select>
 
           <select
-            value={filterCity}
-            onChange={(e) => setFilterCity(e.target.value)}
-            className="p-2 border rounded"
-            disabled={isLoadingAddresses}
+            value={filterDistance}
+            onChange={(e) => setFilterDistance(e.target.value)}
+            className="p-2 border rounded font-bebas"
+            disabled={!userLocation}
           >
-            <option value="all">
-              {isLoadingAddresses ? 'Loading cities...' : 'All Cities'}
-            </option>
-            {!isLoadingAddresses && cities.map(city => (
-              <option key={city} value={city}>
-                {city}
-              </option>
-            ))}
+            <option value="all">Any Distance</option>
+            <option value="1000">Within 1km</option>
+            <option value="5000">Within 5km</option>
+            <option value="10000">Within 10km</option>
           </select>
 
           <select
             value={filterAttendance}
             onChange={(e) => setFilterAttendance(e.target.value)}
-            className="p-2 border rounded"
+            className="p-2 border rounded font-bebas"
           >
             {attendanceFilters.map(filter => (
               <option key={filter.value} value={filter.value}>
@@ -256,20 +263,6 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
               </option>
             ))}
           </select>
-
-          {userLocation && (
-            <select
-              value={filterDistance}
-              onChange={(e) => setFilterDistance(e.target.value)}
-              className="p-2 border rounded"
-            >
-              <option value="all">Any Distance</option>
-              <option value="500">Within 500m</option>
-              <option value="1000">Within 1km</option>
-              <option value="5000">Within 5km</option>
-              <option value="10000">Within 10km</option>
-            </select>
-          )}
         </div>
       </div>
 
@@ -280,64 +273,39 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
       )}
 
       <div className="space-y-2">
-        {paginatedSpots.map((spot) => {
-          const attendanceInfo = getSpotAttendanceInfo(spot.id);
-          const hasAttendees = attendanceInfo.total > 0;
-          const address = spotAddresses[spot.id];
-
-          return (
-            <div
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {paginatedSpots.map((spot) => (
+            <SpotCard
               key={spot.id}
+              spot={spot}
+              currentUserId={currentUserId}
+              onDelete={() => {
+                // Refresh the spots list after deletion
+                window.location.reload();
+              }}
               onClick={() => onSpotClick(spot)}
-              className={`p-4 rounded-lg cursor-pointer transition-all ${
-                hasAttendees ? 'bg-blue-50 hover:bg-blue-100' : 'bg-gray-50 hover:bg-gray-100'
-              }`}
-            >
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-medium">{spot.title}</h3>
-                  <p className="text-sm text-gray-600">Type: {spot.type}</p>
-                  <p className="text-sm text-gray-600">
-                    📍 {isLoadingAddresses ? 'Loading...' : (address?.city || 'Unknown')}
-                  </p>
-                  {userLocation && (
-                    <p className="text-sm text-gray-500">
-                      {(getDistance(userLocation.lat, userLocation.lng, spot.latitude, spot.longitude) / 1000).toFixed(1)}km away
-                    </p>
-                  )}
-                </div>
-                {hasAttendees && (
-                  <div className="text-right text-sm">
-                    {attendanceInfo.active > 0 && (
-                      <div className="text-green-600">
-                        {attendanceInfo.active} active now
-                      </div>
-                    )}
-                    {attendanceInfo.scheduled > 0 && (
-                      <div className="text-blue-600">
-                        {attendanceInfo.scheduled} scheduled
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
+              attendanceInfo={getSpotAttendanceInfo(spot.id)}
+              userLocation={userLocation}
+            />
+          ))}
+        </div>
       </div>
 
-      <div className="flex justify-between mt-4">
+      <div className="mt-6 flex justify-center gap-2">
         <button
-          onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+          onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
           disabled={currentPage === 1}
-          className="bg-blue-500 text-white py-1 px-3 rounded disabled:bg-gray-300"
+          className="btn-secondary"
         >
           Previous
         </button>
+        <span className="px-4 py-2 font-cornerstone">
+          Page {currentPage} of {totalPages}
+        </span>
         <button
-          onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+          onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
           disabled={currentPage === totalPages}
-          className="bg-blue-500 text-white py-1 px-3 rounded disabled:bg-gray-300"
+          className="btn-secondary"
         >
           Next
         </button>

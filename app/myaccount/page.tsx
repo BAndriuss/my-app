@@ -120,18 +120,18 @@ export default function AccountPage() {
   const presetAmounts = [10, 20, 50, 100]
 
   return (
-    <>
+    <div className="min-h-screen bg-pattern-1">
       <Navbar />
 
-      <div className="max-w-lg mx-auto mt-20 p-6 border shadow rounded-xl text-center">
-        <h1 className="text-2xl font-bold mb-4">👤 My Account</h1>
+      <div className="max-w-lg mx-auto mt-20 content-overlay p-8">
+        <h1 className="heading-1 mb-4">👤 MY ACCOUNT</h1>
         {username && (
-          <p className="text-lg mb-4">
-            Username: <span className="font-semibold">{username}</span>
+          <p className="description-text mb-4">
+            Username: <span className="font-cornerstone">{username}</span>
           </p>
         )}
-        <p className="text-lg mb-6">
-          Wallet balance: <span className="font-semibold">${balance?.toFixed(2) ?? '...'}</span>
+        <p className="description-text mb-6">
+          Wallet balance: <span className="font-cornerstone">${balance?.toFixed(2) ?? '...'}</span>
         </p>
 
         <div className="mb-4">
@@ -140,9 +140,9 @@ export default function AccountPage() {
               <button
                 key={amt}
                 onClick={() => setAmount(amt)}
-                className={`px-4 py-2 rounded ${
+                className={`btn-primary ${
                   amount === amt
-                    ? 'bg-blue-500 text-white'
+                    ? 'bg-blue-500'
                     : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
                 }`}
               >
@@ -156,7 +156,7 @@ export default function AccountPage() {
               type="number"
               value={amount || ''}
               onChange={(e) => setAmount(Math.max(0, parseFloat(e.target.value) || 0))}
-              className="w-full p-2 border rounded"
+              className="w-full p-2 border rounded font-bebas text-base"
               placeholder="Enter custom amount"
               min="0"
               step="0.01"
@@ -164,7 +164,7 @@ export default function AccountPage() {
             <button
               onClick={addFunds}
               disabled={loading}
-              className="bg-green-500 hover:bg-green-600 text-white font-semibold px-6 py-2 rounded disabled:bg-gray-400"
+              className="btn-primary bg-green-500 hover:bg-green-600 disabled:bg-gray-400"
             >
               {loading ? 'Adding...' : 'Add Funds'}
             </button>
@@ -172,30 +172,30 @@ export default function AccountPage() {
         </div>
 
         {error && (
-          <div className="text-red-500 mb-4">
+          <div className="description-text text-red-500 mb-4">
             {error}
           </div>
         )}
 
         {success && (
-          <div className="text-green-500 mb-4">
+          <div className="description-text text-green-500 mb-4">
             {success}
           </div>
         )}
 
         <div className="flex flex-col gap-4">
           <Link href="/myaccount/purchases">
-            <button className="bg-black text-white px-4 py-2 rounded hover:bg-gray-800 w-full">
-              🧾 View My Purchases
+            <button className="btn-primary bg-black hover:bg-gray-800 w-full">
+              🧾 MY PURCHASES
             </button>
           </Link>
           <Link href="/myaccount/sold">
-            <button className="bg-black text-white px-4 py-2 rounded hover:bg-gray-800 w-full">
-              💼 View My Sold Items
+            <button className="btn-primary bg-black hover:bg-gray-800 w-full">
+              💼 MY SOLD ITEMS
             </button>
           </Link>
         </div>
       </div>
-    </>
+    </div>
   )
 }

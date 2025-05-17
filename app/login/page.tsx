@@ -83,31 +83,33 @@ export default function LoginPage() {
 
   if (isRegistering) {
     return (
-      <div>
-        <RegistrationForm onRegistrationSuccess={handleRegistrationSuccess} />
-        <div className="text-center mt-4">
-          <button
-            onClick={() => setIsRegistering(false)}
-            className="text-blue-600 hover:text-blue-800"
-          >
-            Already have an account? Log in
-          </button>
+      <div className="min-h-screen bg-pattern-1 flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="content-overlay p-8 max-w-md w-full">
+          <RegistrationForm onRegistrationSuccess={handleRegistrationSuccess} />
+          <div className="text-center mt-4">
+            <button
+              onClick={() => setIsRegistering(false)}
+              className="font-cornerstone text-blue-600 hover:text-blue-800"
+            >
+              Already have an account? Log in
+            </button>
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen bg-pattern-1 flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="content-overlay p-8 max-w-md w-full space-y-8">
         <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Sign in to your account
+          <h2 className="heading-1 text-center">
+            SIGN IN TO YOUR ACCOUNT
           </h2>
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleLogin}>
-          <div className="rounded-md shadow-sm -space-y-px">
+          <div className="rounded-md -space-y-px">
             <div>
               <label htmlFor="email-address" className="sr-only">
                 Email address
@@ -118,7 +120,7 @@ export default function LoginPage() {
                 type="email"
                 autoComplete="email"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                className="font-bebas appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 text-base"
                 placeholder="Email address"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -134,7 +136,7 @@ export default function LoginPage() {
                 type="password"
                 autoComplete="current-password"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                className="font-bebas appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 text-base"
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -143,7 +145,7 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <div className="text-red-500 text-sm text-center">
+            <div className="description-text text-red-500 text-center">
               {error}
             </div>
           )}
@@ -152,7 +154,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-300"
+              className="btn-primary bg-blue-600 hover:bg-blue-700 w-full disabled:bg-blue-300"
             >
               {loading ? 'Signing in...' : 'Sign in'}
             </button>
@@ -162,12 +164,12 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={handleGoogleLogin}
-              className="group relative w-full flex justify-center py-2 px-4 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="btn-primary bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 w-full"
             >
               <img
                 src="/google.svg"
                 alt="Google"
-                className="w-5 h-5 mr-2"
+                className="w-5 h-5 mr-2 inline"
               />
               Sign in with Google
             </button>
@@ -177,7 +179,7 @@ export default function LoginPage() {
         <div className="text-center">
           <button
             onClick={() => setIsRegistering(true)}
-            className="text-blue-600 hover:text-blue-800"
+            className="font-cornerstone text-blue-600 hover:text-blue-800"
           >
             Don't have an account? Register
           </button>

@@ -2,55 +2,217 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Font Face Declarations */
+@font-face {
+  font-family: 'Bebas Neue';
+  src: url('/fonts/BebasNeue-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
 
+@font-face {
+  font-family: 'Cornerstone';
+  src: url('/fonts/Cornerstone.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Base Typography */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Cornerstone', sans-serif;
+}
+
+button {
+  font-family: 'Cornerstone', sans-serif;
+}
+
+/* Background Patterns */
+.bg-pattern-1, .bg-pattern-2, .bg-pattern-3, .bg-pattern-4 {
+  background-image: url('/backgrounds/background_main.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  position: relative;
+  will-change: transform;
+  -webkit-backface-visibility: hidden;
+  -moz-backface-visibility: hidden;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+/* Content overlay for better readability */
+.content-overlay {
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(5px);
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Marker styles */
 .marker-icon {
+  width: 40px;
+  height: 40px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  display: block;
+  transform: translate(-50%, -100%);
+}
+
+.rail { background-image: url('/rail.png'); }
+.park { background-image: url('/park.png'); }
+.box { background-image: url('/box.png'); }
+.stairs { background-image: url('/stairs.png'); }
+
+@keyframes popIn {
+  0% {
+    width: 0px;
+    height: 0px;
+    opacity: 0;
+  }
+  80% {
     width: 40px;
     height: 40px;
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
-    display: block;
-    transform: translate(-50%, -100%); /* center over lat/lng */
+    opacity: 1;
   }
-  
-  /* Custom per type */
-  .rail {
-    background-image: url('/rail.png');
+  100% {
+    width: 40px;
+    height: 40px;
   }
-  
-  .park {
-    background-image: url('/park.png');
-  }
-  
-  .box {
-    background-image: url('/box.png');
-  }
-  
-  .stairs {
-    background-image: url('/stairs.png');
+}
+
+.marker {
+  display: block;
+  border: none;
+  padding: 0;
+  animation: popIn 0.4s ease forwards;
+}
+
+/* Navigation Styles */
+.navbar {
+  @apply bg-white shadow-lg w-full sticky top-0 z-50;
+  height: 64px;
+}
+
+.navbar-container {
+  @apply w-full h-full px-4;
+  max-width: 100%;
+}
+
+.nav-link {
+  @apply font-cornerstone text-gray-700 hover:text-blue-600 transition-colors duration-200 text-lg;
+}
+
+.nav-link.active {
+  @apply text-blue-600;
+}
+
+/* Username and Balance Display */
+.username-display {
+  font-family: 'Cornerstone', sans-serif;
+  font-size: 1.1rem;
+  color: #1f2937;
+  padding: 0.5rem 1rem;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  cursor: pointer;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.username-display:hover {
+  background-color: #f3f4f6;
+}
+
+.balance-display {
+  font-family: 'Cornerstone', sans-serif;
+  font-size: 1.1rem;
+  color: #22c55e;
+  background-color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  border: 2px solid #22c55e;
+  white-space: nowrap;
+}
+
+/* Button Styles */
+.btn {
+  @apply font-cornerstone px-4 py-2 rounded transition-all duration-200 text-lg;
+}
+
+.btn-primary {
+  @apply btn bg-blue-600 text-white hover:bg-blue-700;
+}
+
+.btn-secondary {
+  @apply btn bg-gray-200 text-gray-800 hover:bg-gray-300;
+}
+
+.btn-danger {
+  @apply btn bg-red-600 text-white hover:bg-red-700;
+}
+
+/* Typography Components */
+@layer components {
+  /* Interactive Elements - All Cornerstone */
+  .btn {
+    @apply font-cornerstone px-4 py-2 rounded transition-all duration-200 text-lg;
   }
 
-  @keyframes popIn {
-    0% {
-        width: 0px;
-        height: 0px;
-      opacity: 0;
-    }
-    80% {
-        width: 40px;
-        height: 40px;
-      opacity: 1;
-    }
-    100% {
-        width: 40px;
-        height: 40px;
-      
-    }
+  .btn-primary {
+    @apply btn bg-blue-600 text-white hover:bg-blue-700;
   }
 
-  .marker {
-    display: block;
-    border: none;
-    padding: 0;
-    animation: popIn 0.4s ease forwards;
+  .btn-secondary {
+    @apply btn bg-gray-200 text-gray-800 hover:bg-gray-300;
   }
+
+  /* Headings - All Cornerstone */
+  .heading-1 {
+    @apply font-cornerstone text-4xl font-bold mb-4;
+  }
+
+  .heading-2 {
+    @apply font-cornerstone text-3xl font-bold mb-3;
+  }
+
+  .heading-3 {
+    @apply font-cornerstone text-2xl font-bold mb-2;
+  }
+
+  /* Navigation - Cornerstone */
+  .nav-link {
+    @apply font-cornerstone text-lg hover:text-blue-600 transition-colors;
+  }
+
+  /* Card Elements */
+  .card-title {
+    @apply font-cornerstone text-xl font-bold mb-2;
+  }
+
+  /* Descriptive Text - Only place for Bebas Neue */
+  .description-text {
+    @apply font-bebas text-gray-600 tracking-wide text-base;
+  }
+
+  .card-description {
+    @apply font-bebas text-gray-600 leading-relaxed text-base;
+  }
+
+  .small-text {
+    @apply font-bebas text-sm text-gray-500;
+  }
+}
+
+/* Main Content Spacing */
+.main-content {
+  padding-top: 1.5rem; /* Add some breathing room at the top */
+  min-height: calc(100vh - 64px); /* Ensure content takes remaining viewport height */
+  width: 100%;
+  position: relative;
+  z-index: 10; /* Lower than navbar */
+}

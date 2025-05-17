@@ -5,7 +5,12 @@ module.exports = {
       "./components/**/*.{js,ts,jsx,tsx}",
     ],
     theme: {
-      extend: {},
+      extend: {
+        fontFamily: {
+          'cornerstone': ['Cornerstone', 'sans-serif'],
+          'bebas': ['Bebas Neue', 'sans-serif'],
+        },
+      },
     },
     plugins: [],
   }

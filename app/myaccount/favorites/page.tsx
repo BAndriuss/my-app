@@ -68,19 +68,23 @@ export default function FavoritesPage() {
   }, [])
 
   return (
-    <>
+    <div className="min-h-screen bg-pattern-2">
       <Navbar />
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-6">⭐ My Favorites</h1>
+        <div className="content-overlay p-8 mb-8">
+          <h1 className="heading-1 mb-6">⭐ MY FAVORITES</h1>
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {items.length === 0 && (
-            <p className="text-gray-500 col-span-full text-center">No favorite items yet.</p>
+            <div className="content-overlay p-8 col-span-full">
+              <p className="description-text text-gray-500 text-center">No favorite items yet.</p>
+            </div>
           )}
           {items.map((item) => (
             <div
               key={item.id}
-              className="border rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-200"
+              className="content-overlay overflow-hidden hover:shadow-lg transition-shadow duration-200"
             >
               <div className="relative">
                 <Link href={`/market/${item.id}`}>
@@ -93,7 +97,7 @@ export default function FavoritesPage() {
                         className="object-cover"
                       />
                       {item.images.length > 1 && (
-                        <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-sm">
+                        <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 description-text text-white px-2 py-1 rounded">
                           +{item.images.length - 1} more
                         </div>
                       )}
@@ -101,18 +105,18 @@ export default function FavoritesPage() {
 
                     <div className="p-4">
                       <div className="flex justify-between items-start mb-2">
-                        <p className="text-2xl font-bold text-green-600">${item.price}</p>
-                        <p className="text-xs text-gray-500">{getRelativeTime(item.created_at || '')}</p>
+                        <p className="text-2xl font-cornerstone text-green-600">${item.price}</p>
+                        <p className="description-text text-gray-500">{getRelativeTime(item.created_at || '')}</p>
                       </div>
-                      <h2 className="text-lg font-semibold mb-2">{item.title}</h2>
+                      <h2 className="card-title">{item.title}</h2>
                       <div className="space-y-1">
-                        <div className="flex items-center gap-2 text-sm">
-                          <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
+                        <div className="flex items-center gap-2">
+                          <span className="description-text px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
                             {typeDescriptions[item.type]}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2 text-sm">
-                          <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full">
+                        <div className="flex items-center gap-2">
+                          <span className="description-text px-2 py-1 bg-gray-100 text-gray-800 rounded-full">
                             {conditionDescriptions[item.condition]}
                           </span>
                         </div>
@@ -130,6 +134,6 @@ export default function FavoritesPage() {
           ))}
         </div>
       </div>
-    </>
+    </div>
   )
 } 

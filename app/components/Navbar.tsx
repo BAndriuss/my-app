@@ -215,38 +215,76 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="bg-white shadow px-6 py-4 flex items-center justify-between">
-      <div className="text-2xl font-bold text-black">
-         SkateSpots
-      </div>
+    <nav className="navbar">
+      <div className="navbar-container">
+        <div className="flex items-center h-16">
+          {/* Left side - Logo */}
+          <div className="flex-none">
+            <Link href="/" className="text-2xl font-cornerstone text-gray-800 hover:text-gray-600 transition-colors">
+              SKATESPOTS
+            </Link>
+          </div>
 
-      <div className="flex gap-6 text-sm font-medium text-gray-700">
-        <Link href="/dashboard" className="hover:text-black">HOME</Link>
-        <Link href="/posts" className="hover:text-black">POSTS</Link>
-        <Link href="/market" className="hover:text-black">MARKET</Link>
-        <Link href="/spots" className="hover:text-black">SPOTS</Link>
-        <Link href="/news" className="hover:text-black">NEWS</Link>
-        <Link href="/myaccount" className="hover:text-black">MY ACCOUNT</Link>
-        <Link href="/myaccount/favorites" className="hover:text-black">FAVORITES</Link>
-      </div>
+          {/* Middle - Navigation */}
+          <div className="flex-1 hidden md:flex items-center justify-center">
+            <div className="flex items-center space-x-6">
+              <Link href="/dashboard" className="nav-link">
+                Dashboard
+              </Link>
+              <Link href="/spots" className="nav-link">
+                Spots
+              </Link>
+              <Link href="/market" className="nav-link">
+                Market
+              </Link>
+              <Link href="/myaccount/favorites" className="nav-link">
+                Favorites
+              </Link>
+            </div>
+          </div>
 
-      <div className="flex items-center gap-4">
-        {isLoggedIn && (
-          <>
-            {username && <span className="text-sm text-gray-600">Hi, {username}</span>}
-            {balance !== null && (
-              <span className="text-sm font-medium text-green-600">
-                Balance: ${balance.toFixed(2)}
-              </span>
+          {/* Right side - User Info */}
+          <div className="flex-none hidden md:flex items-center space-x-4">
+            {isLoggedIn ? (
+              <>
+                {balance !== null && (
+                  <div className="balance-display">
+                    ${balance.toFixed(2)}
+                  </div>
+                )}
+                {username && (
+                  <Link href="/myaccount" className="username-display hover:text-blue-600 transition-colors">
+                    {username}
+                  </Link>
+                )}
+                <button
+                  onClick={handleLogout}
+                  className="btn-danger"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <Link href="/login" className="btn-primary">
+                Login
+              </Link>
             )}
-            <button
-              onClick={handleLogout}
-              className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
-            >
-              Logout
+          </div>
+
+          {/* Mobile menu button */}
+          <div className="md:hidden flex items-center">
+            <button className="mobile-menu-button p-2 rounded-md hover:bg-gray-100">
+              <svg className="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
             </button>
-          </>
-        )}
+          </div>
+        </div>
+
+        {/* Mobile menu */}
+        <div className="md:hidden">
+          {/* Add your mobile menu items here */}
+        </div>
       </div>
     </nav>
   );
