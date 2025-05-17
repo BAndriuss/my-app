@@ -9,6 +9,7 @@ import { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 interface Profile {
   username: string | null
   balance: number
+  is_admin: boolean
 }
 
 interface ProfileChange {
@@ -21,79 +22,91 @@ export default function Navbar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [currentChannel, setCurrentChannel] = useState<any>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
   const router = useRouter()
 
     const fetchProfile = async (userId: string) => {
       console.log('Navbar: Fetching profile for user:', userId);
-    let retries = 3;
+      let retries = 3;
     
-    while (retries > 0) {
-      try {
-        // First check if the profile exists
-        const { count, error: countError } = await supabase
-          .from('profiles')
-          .select('*', { count: 'exact', head: true })
-          .eq('id', userId);
+      while (retries > 0) {
+        try {
+          // First check if the profile exists
+          const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('username, balance, is_admin')
+            .eq('id', userId)
+            .single();
 
-        if (countError) {
-          console.error('Navbar: Error checking profile existence:', countError);
-          throw countError;
-        }
+          if (error) {
+            // If error is 'not found', create a new profile
+            if (error.code === 'PGRST116') {
+              console.log('Navbar: Profile not found, creating new profile');
+              const { data: { session } } = await supabase.auth.getSession();
+              const { data: newProfile, error: createError } = await supabase
+                .from('profiles')
+                .insert([
+                  {
+                    id: userId,
+                    username: null,
+                    balance: 0,
+                    is_admin: false,
+                    email: session?.user?.email
+                  }
+                ])
+                .select()
+                .single();
 
-        // If profile doesn't exist yet, wait and retry
-        if (count === 0) {
-          console.log('Navbar: Profile does not exist yet, waiting...');
+              if (createError) {
+                console.error('Navbar: Error creating profile:', createError);
+                throw createError;
+              }
+
+              if (newProfile) {
+                console.log('Navbar: New profile created:', newProfile);
+                setUsername(newProfile.username);
+                setBalance(newProfile.balance);
+                setIsAdmin(newProfile.is_admin);
+                return newProfile;
+              }
+            } else {
+              console.error('Navbar: Error fetching profile:', error);
+              if (retries > 1) {
+                console.log(`Navbar: Retrying... ${retries - 1} attempts left`);
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                retries--;
+                continue;
+              }
+              throw error;
+            }
+          }
+
+          if (!profile) {
+            console.log('Navbar: No profile found for user:', userId);
+            if (retries > 1) {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              retries--;
+              continue;
+            }
+            return null;
+          }
+
+          console.log('Navbar: Profile fetched successfully:', profile);
+          setUsername(profile.username);
+          setBalance(profile.balance);
+          setIsAdmin(profile.is_admin);
+          return profile;
+        } catch (error) {
+          console.error('Navbar: Error in fetchProfile:', error);
           if (retries > 1) {
-            await new Promise(resolve => setTimeout(resolve, 2000)); // Longer wait for profile creation
+            await new Promise(resolve => setTimeout(resolve, 1000));
             retries--;
             continue;
           }
           return null;
         }
-
-        // If profile exists, fetch it
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('username, balance')
-          .eq('id', userId)
-          .single();
-
-        if (error) {
-          console.error('Navbar: Error fetching profile:', error);
-          if (retries > 1) {
-            console.log(`Navbar: Retrying... ${retries - 1} attempts left`);
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            retries--;
-            continue;
-          }
-          throw error;
-        }
-
-        if (!profile) {
-          console.log('Navbar: No profile found for user:', userId);
-          if (retries > 1) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            retries--;
-            continue;
-          }
-          return null;
-        }
-
-        console.log('Navbar: Profile fetched successfully:', profile);
-        setUsername(profile.username);
-        setBalance(profile.balance);
-        return profile;
-      } catch (error) {
-        console.error('Navbar: Error in fetchProfile:', error);
-        if (retries > 1) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          retries--;
-          continue;
-        }
-        return null;
       }
-    }
-    return null;
+      return null;
     };
 
     const setupSubscription = async (userId: string) => {
@@ -116,6 +129,7 @@ export default function Navbar() {
             if (newData) {
             setUsername(newData.username);
             setBalance(newData.balance);
+            setIsAdmin(newData.is_admin);
             }
           }
         )
@@ -240,6 +254,11 @@ export default function Navbar() {
               <Link href="/myaccount/favorites" className="nav-link">
                 Favorites
               </Link>
+              {isAdmin && (
+                <Link href="/admin" className="nav-link text-red-600 hover:text-red-800">
+                  Admin
+                </Link>
+              )}
             </div>
           </div>
 

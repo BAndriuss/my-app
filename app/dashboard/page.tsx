@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabaseClient'
 import Navbar from '../components/Navbar'
+import RecentActivities from '../components/RecentActivities'
 
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
@@ -33,19 +34,14 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-pattern-1">
       <Navbar />
       <main className="main-content">
-        <div className="max-w-2xl mx-auto px-8">
+        <div className="max-w-4xl mx-auto px-8">
           <div className="content-overlay p-8">
-            <h1 className="heading-1 mb-4">WELCOME TO YOUR DASHBOARD 🎉</h1>
-            <p className="description-text mb-6">Logged in as: <span className="font-cornerstone">{userEmail}</span></p>
-            <button
-              className="btn-primary bg-red-500 hover:bg-red-600"
-              onClick={async () => {
-                await supabase.auth.signOut()
-                router.push('/login')
-              }}
-            >
-              Logout
-            </button>
+            <div className="mb-8">
+              <h1 className="heading-1 mb-4">WELCOME TO YOUR DASHBOARD</h1>
+              <p className="description-text mb-6">Logged in as: <span className="font-cornerstone">{userEmail}</span></p>
+            </div>
+            
+            <RecentActivities />
           </div>
         </div>
       </main>

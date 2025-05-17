@@ -106,6 +106,7 @@ export default function AddSpotModal({
           latitude,
           longitude,
           image_url: imageUrl,
+          is_approved: false,
         },
       ])
 

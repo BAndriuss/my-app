@@ -13,6 +13,7 @@ interface SpotCardProps {
     user_id: string
     latitude: number
     longitude: number
+    is_approved: boolean
   }
   currentUserId: string | null
   onDelete: () => void
@@ -24,6 +25,7 @@ interface SpotCardProps {
     isEmpty: boolean
   }
   userLocation: { lat: number; lng: number } | null
+  isAdmin?: boolean
 }
 
 function formatDistance(meters: number): string {
@@ -56,10 +58,11 @@ export default function SpotCard({
   onDelete, 
   onClick,
   attendanceInfo,
-  userLocation
+  userLocation,
+  isAdmin
 }: SpotCardProps) {
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
+    <div className={`bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 ${isAdmin && !spot.is_approved ? 'border-2 border-yellow-500' : ''}`}>
       <div className="relative h-48 cursor-pointer" onClick={onClick}>
         {spot.image_url ? (
           <Image
@@ -76,10 +79,20 @@ export default function SpotCard({
         <div className="absolute top-2 right-2 bg-blue-600 text-white px-2 py-1 rounded text-sm">
           {spot.type}
         </div>
+        {isAdmin && !spot.is_approved && (
+          <div className="absolute top-2 left-2 bg-yellow-500 text-white px-2 py-1 rounded text-sm font-semibold">
+            Pending Approval
+          </div>
+        )}
       </div>
 
       <div className="p-4">
-        <h3 className="font-cornerstone text-xl mb-2">{spot.title}</h3>
+        <div className="flex justify-between items-start">
+          <h3 className="font-cornerstone text-xl mb-2">{spot.title}</h3>
+          {isAdmin && !spot.is_approved && (
+            <span className="text-yellow-500 text-sm font-semibold">⚠️ Pending</span>
+          )}
+        </div>
         
         {userLocation && (
           <p className="text-gray-600 text-sm mb-2">

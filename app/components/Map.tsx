@@ -38,6 +38,7 @@ interface Spot {
   latitude: number;
   longitude: number;
   image_url: string | null;
+  is_approved: boolean;
 }
 
 export default function MyMap() {
@@ -46,6 +47,7 @@ export default function MyMap() {
   const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null);
   const [hoveredSpot, setHoveredSpot] = useState<Spot | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [spotAddress, setSpotAddress] = useState<string>('');
   const mapRef = useRef<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -244,17 +246,28 @@ export default function MyMap() {
   };
 
   const fetchSpots = async () => {
-    const { data } = await supabase.from('spots').select('*');
-    if (data) {
-      setSpots(data as Spot[]);
+    try {
+      // For admin users, fetch all spots. For non-admin users, only fetch approved spots
+      const { data, error } = await supabase
+        .from('spots')
+        .select('*');
+
+      if (error) {
+        console.error('Error fetching spots:', error);
+        return;
+      }
+
+      // Filter spots based on admin status
+      const filteredData = isAdmin ? data : data.filter((spot: Spot) => spot.is_approved);
+      setSpots(filteredData);
       
       const addresses: Record<string, { address: string; city: string }> = {};
       const citiesSet = new Set<string>();
       
       // Process spots in smaller batches to avoid overwhelming the API
       const batchSize = 5;
-      for (let i = 0; i < data.length; i += batchSize) {
-        const batch = data.slice(i, i + batchSize);
+      for (let i = 0; i < filteredData.length; i += batchSize) {
+        const batch = filteredData.slice(i, i + batchSize);
         
         // Process each batch
         await Promise.all(
@@ -271,7 +284,7 @@ export default function MyMap() {
         );
 
         // Add a delay between batches
-        if (i + batchSize < data.length) {
+        if (i + batchSize < filteredData.length) {
           await delay(1000); // 1 second delay between batches
         }
       }
@@ -280,8 +293,10 @@ export default function MyMap() {
       setCities(Array.from(citiesSet).sort());
 
       // Calculate and store city coordinates
-      const coordinates = calculateCityCoordinates(data as Spot[], addresses);
+      const coordinates = calculateCityCoordinates(filteredData, addresses);
       setCityCoordinates(coordinates);
+    } catch (error) {
+      console.error('Error in fetchSpots:', error);
     }
   };
 
@@ -298,7 +313,7 @@ export default function MyMap() {
     loadData();
 
     // Set up real-time subscription for attendance changes
-    const channel = supabase
+    const attendanceChannel = supabase
       .channel('spot-attendances-changes')
       .on(
         'postgres_changes',
@@ -308,18 +323,41 @@ export default function MyMap() {
           table: 'spot_attendances'
         },
         async (payload) => {
-          console.log('Attendance change detected:', payload); // Debug log
+          console.log('Attendance change detected:', payload);
           await fetchSpotAttendances();
         }
       )
       .subscribe();
 
+    // Set up real-time subscription for spot changes
+    const spotsChannel = supabase
+      .channel('spots-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'spots'
+        },
+        async (payload) => {
+          console.log('Spot change detected:', payload);
+          await fetchSpots();
+        }
+      )
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(attendanceChannel);
+      supabase.removeChannel(spotsChannel);
     };
-  }, []);
+  }, [isAdmin]);
 
   const filteredSpots = spots.filter((spot) => {
+    // For non-admin users, only show approved spots
+    if (!isAdmin && !spot.is_approved) {
+      return false;
+    }
+
     const matchesSearch =
       spot.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       spot.type.toLowerCase().includes(searchQuery.toLowerCase());
@@ -434,6 +472,16 @@ export default function MyMap() {
     const getUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setCurrentUserId(session?.user?.id || null);
+      
+      if (session?.user?.id) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', session.user.id)
+          .single();
+        
+        setIsAdmin(data?.is_admin || false);
+      }
     };
     getUser();
     fetchSpots();
@@ -661,7 +709,7 @@ export default function MyMap() {
                 // Force a re-render of the SpotAttendance component
                 console.log('Attendance changed, refreshing sidebar...')
                 // Using a key prop to force remount of SpotAttendance
-                setSelectedSpot({...selectedSpot})
+                setSelectedSpot({...selectedSpot, is_approved: selectedSpot.is_approved})
               }}
             />
           </div>
@@ -673,7 +721,7 @@ export default function MyMap() {
             />
           </div>
 
-          {currentUserId === selectedSpot.user_id && (
+          {(currentUserId === selectedSpot.user_id || isAdmin) && (
             <div className="mt-4">
               <DeleteButton
                 onDelete={handleDeleteSpot}
@@ -710,6 +758,7 @@ export default function MyMap() {
   spotAddresses={spotAddresses}
   cities={cities}
   isLoadingAddresses={isLoadingAddresses}
+  isAdmin={isAdmin}
 />
 
 <p className="text-center mt-4 text-sm text-gray-500">

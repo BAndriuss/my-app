@@ -1,0 +1,121 @@
+.approveBtn {
+  display: block;
+  background-color: #27ae60;
+  width: 260px;
+  height: 45px;
+  line-height: 45px;
+  margin: 0;
+  color: #fff;
+  position: relative;
+  cursor: pointer;
+  overflow: hidden;
+  border-radius: 5px;
+  box-shadow: 0 0 20px 0 rgba(0, 0, 0, 0.3);
+  border: none;
+  transition: all 0.25s cubic-bezier(0.310, -0.105, 0.430, 1.400);
+}
+
+.approveBtn:hover {
+  opacity: 0.9;
+}
+
+.approveBtn:active {
+  opacity: 1;
+}
+
+.text {
+  display: block;
+  height: 100%;
+  width: 72%;
+  text-align: center;
+  position: absolute;
+  top: 0;
+  left: 0;
+  font-family: 'Cornerstone', sans-serif;
+  font-size: 16px;
+  line-height: inherit;
+  text-transform: uppercase;
+  color: white;
+  transition: all 0.25s cubic-bezier(0.310, -0.105, 0.430, 1.400);
+}
+
+.text::after {
+  content: '';
+  background-color: #219a52;
+  width: 2px;
+  height: 70%;
+  position: absolute;
+  top: 15%;
+  right: -1px;
+}
+
+.icon {
+  display: block;
+  height: 100%;
+  width: 28%;
+  position: absolute;
+  top: 0;
+  right: 0;
+  text-align: center;
+  transition: all 0.25s cubic-bezier(0.310, -0.105, 0.430, 1.400);
+}
+
+.fa {
+  font-size: 30px;
+  vertical-align: middle;
+  transition: all 0.25s cubic-bezier(0.310, -0.105, 0.430, 1.400);
+  height: 36px;
+}
+
+/* Hover State */
+.approveBtn:hover .text {
+  left: -72%;
+  opacity: 0;
+}
+
+.approveBtn:hover .icon {
+  width: 100%;
+}
+
+.approveBtn:hover .fa {
+  font-size: 45px;
+}
+
+/* Success State */
+.success {
+  background-color: #2ecc71;
+}
+
+.success .text {
+  left: -72%;
+  opacity: 0;
+}
+
+.success .icon {
+  width: 100%;
+}
+
+.success .fa {
+  font-size: 45px;
+}
+
+/* Confirming State */
+.confirming {
+  background-color: #f1c40f;
+}
+
+/* Approving State */
+.approving {
+  background-color: #7f8c8d;
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+.approving .text {
+  animation: pulse 1.5s ease infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+} 

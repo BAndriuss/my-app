@@ -77,6 +77,28 @@ export default function LoginPage() {
     }
   }
 
+  const handleFacebookLogin = async () => {
+    try {
+      console.log('Attempting Facebook login')
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'facebook',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`
+        }
+      })
+
+      if (error) {
+        console.error('Facebook login error:', error)
+        throw error
+      }
+
+      console.log('Facebook login initiated:', data)
+    } catch (err) {
+      console.error('Facebook login error:', err)
+      setError(err instanceof Error ? err.message : 'An error occurred during Facebook login')
+    }
+  }
+
   const handleRegistrationSuccess = () => {
     setIsRegistering(false)
   }
@@ -160,7 +182,7 @@ export default function LoginPage() {
             </button>
           </div>
 
-          <div className="mt-4">
+          <div className="mt-4 space-y-3">
             <button
               type="button"
               onClick={handleGoogleLogin}
@@ -172,6 +194,19 @@ export default function LoginPage() {
                 className="w-5 h-5 mr-2 inline"
               />
               Sign in with Google
+            </button>
+
+            <button
+              type="button"
+              onClick={handleFacebookLogin}
+              className="btn-primary bg-[#1877F2] text-white hover:bg-[#166FE5] w-full"
+            >
+              <img
+                src="/facebook.svg"
+                alt="Facebook"
+                className="w-5 h-5 mr-2 inline"
+              />
+              Sign in with Facebook
             </button>
           </div>
         </form>

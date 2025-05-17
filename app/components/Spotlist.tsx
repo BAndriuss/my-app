@@ -12,7 +12,8 @@ interface Spot {
   latitude: number;
   longitude: number;
   image_url: string | null;
-  user_id: string; // <-- ADD THIS LINE
+  user_id: string;
+  is_approved: boolean;
 }
 
 interface SpotListProps {
@@ -36,6 +37,7 @@ interface SpotListProps {
     spotAddresses: Record<string, { address: string; city: string }>;
     cities: string[];
     isLoadingAddresses: boolean;
+    isAdmin: boolean;
 }
 
 // Simple distance calculator (haversine formula)
@@ -74,7 +76,8 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
     spotAttendances,
     spotAddresses,
     cities,
-    isLoadingAddresses
+    isLoadingAddresses,
+    isAdmin
   }: SpotListProps) {
 
   const attendanceFilters = [
@@ -131,11 +134,17 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
       userLocation,
       filterType,
       filterAttendance,
-      searchQuery
+      searchQuery,
+      isAdmin
     });
 
     // Start with all spots
     let filtered = [...spots];
+
+    // Filter out unapproved spots for non-admin users
+    if (!isAdmin) {
+      filtered = filtered.filter(spot => spot.is_approved);
+    }
     
     // Apply each filter separately and log results
     if (searchQuery) {
@@ -183,7 +192,8 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
     filterDistance,
     filterAttendance,
     userLocation,
-    getSpotAttendanceInfo
+    getSpotAttendanceInfo,
+    isAdmin
   ]);
 
   // Debug pagination
@@ -286,6 +296,7 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
               onClick={() => onSpotClick(spot)}
               attendanceInfo={getSpotAttendanceInfo(spot.id)}
               userLocation={userLocation}
+              isAdmin={isAdmin}
             />
           ))}
         </div>
