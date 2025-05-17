@@ -10,25 +10,71 @@ export default function AuthForm() {
   const [errorMsg, setErrorMsg] = useState('');
 
   const handleSignIn = async () => {
-    setLoading(true);
-    setErrorMsg('');
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) setErrorMsg(error.message);
-    setLoading(false);
+    try {
+      console.log('Starting sign in process...');
+      setLoading(true);
+      setErrorMsg('');
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      console.log('Sign in response:', { data, error });
+      if (error) {
+        console.error('Sign in error:', error);
+        setErrorMsg(error.message);
+      } else {
+        console.log('Sign in successful:', data);
+      }
+    } catch (err) {
+      console.error('Sign in exception:', err);
+      setErrorMsg('An unexpected error occurred');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSignUp = async () => {
-    setLoading(true);
-    setErrorMsg('');
-    const { error } = await supabase.auth.signUp({ email, password });
-    if (error) setErrorMsg(error.message);
-    setLoading(false);
+    try {
+      console.log('Starting sign up process...');
+      setLoading(true);
+      setErrorMsg('');
+      const { data, error } = await supabase.auth.signUp({ email, password });
+      console.log('Sign up response:', { data, error });
+      if (error) {
+        console.error('Sign up error:', error);
+        setErrorMsg(error.message);
+      } else {
+        console.log('Sign up successful:', data);
+      }
+    } catch (err) {
+      console.error('Sign up exception:', err);
+      setErrorMsg('An unexpected error occurred');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleGoogleLogin = async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-    });
+    try {
+      console.log('Starting Google sign in process...');
+      setLoading(true);
+      setErrorMsg('');
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`
+        }
+      });
+      console.log('Google sign in response:', { data, error });
+      if (error) {
+        console.error('Google sign in error:', error);
+        setErrorMsg(error.message);
+      } else {
+        console.log('Google sign in initiated:', data);
+      }
+    } catch (err) {
+      console.error('Google sign in exception:', err);
+      setErrorMsg('An unexpected error occurred');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

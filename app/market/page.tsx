@@ -5,11 +5,13 @@ import { supabase } from '../../lib/supabaseClient'
 import Navbar from '../components/Navbar'
 import Link from 'next/link'
 import BuyButton from '../components/BuyButton'
+import FavoriteButton from '../components/FavoriteButton'
 //import DeleteButton from '../components/DeleteButton'
 import EditItemModal from '../components/EditItemModal'
 import { Database } from '../../types/supabase'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
+import { getRelativeTime, typeDescriptions, conditionDescriptions } from '../../lib/utils'
 
 type Item = Database['public']['Tables']['items']['Row']
 
@@ -192,52 +194,67 @@ export default function MarketPage() {
                   key={item.id}
                   className="border rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-200"
                 >
-                  <div 
-                    onClick={() => router.push(`/market/${item.id}`)}
-                    className="cursor-pointer"
-                  >
-                    <div className="relative h-48">
-                      <Image
-                        src={item.main_image_url}
-                        alt={item.title ?? 'Item image'}
-                        fill
-                        className="object-cover"
-                      />
-                      {item.images.length > 1 && (
-                        <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-sm">
-                          +{item.images.length - 1} more
-                        </div>
-                      )}
-                    </div>
+                  <div className="relative">
+                    <div 
+                      onClick={() => router.push(`/market/${item.id}`)}
+                      className="cursor-pointer"
+                    >
+                      <div className="relative h-48">
+                        <Image
+                          src={item.main_image_url}
+                          alt={item.title ?? 'Item image'}
+                          fill
+                          className="object-cover"
+                        />
+                        {item.images.length > 1 && (
+                          <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-sm">
+                            +{item.images.length - 1} more
+                          </div>
+                        )}
+                      </div>
 
-                    <div className="p-4">
-                      <h2 className="text-lg font-semibold mb-1">{item.title}</h2>
-                      <div className="flex justify-between items-center">
-                        <p className="text-green-600 font-bold">${item.price}</p>
-                        <div className="flex gap-2">
-                          <span className="text-sm px-2 py-1 bg-gray-100 rounded">{item.type}</span>
-                          <span className="text-sm px-2 py-1 bg-gray-100 rounded">{item.condition}</span>
+                      <div className="p-4">
+                        <div className="flex justify-between items-start mb-2">
+                          <p className="text-2xl font-bold text-green-600">${item.price}</p>
+                          <p className="text-xs text-gray-500">{getRelativeTime(item.created_at || '')}</p>
+                        </div>
+                        <h2 className="text-lg font-semibold mb-2">{item.title}</h2>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 text-sm">
+                            <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
+                              {typeDescriptions[item.type]}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm">
+                            <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full">
+                              {conditionDescriptions[item.condition]}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
+
+                    {/* Favorite button positioned absolutely */}
+                    <div className="absolute top-2 right-2 z-10">
+                      <FavoriteButton item={item} userId={userId} />
+                    </div>
                   </div>
 
-                  {item.user_id === userId ? (
-                    !item.sold && (
-                      <div className="px-4 pb-4">
+                  {/* Action buttons */}
+                  <div className="px-4 pb-4">
+                    {item.user_id === userId ? (
+                      !item.sold && (
                         <button
                           onClick={() => openModal(item)}
                           className="w-full bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-sm"
                         >
                           Edit
                         </button>
-                      </div>
-                    )
-                  ) : (
-                    <div className="px-4 pb-4">
+                      )
+                    ) : (
                       <BuyButton item={item} onPurchaseComplete={fetchItems} />
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

@@ -227,6 +227,7 @@ export default function Navbar() {
         <Link href="/spots" className="hover:text-black">SPOTS</Link>
         <Link href="/news" className="hover:text-black">NEWS</Link>
         <Link href="/myaccount" className="hover:text-black">MY ACCOUNT</Link>
+        <Link href="/myaccount/favorites" className="hover:text-black">FAVORITES</Link>
       </div>
 
       <div className="flex items-center gap-4">

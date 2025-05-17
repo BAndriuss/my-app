@@ -6,7 +6,9 @@ import { supabase } from '../../../lib/supabaseClient'
 import Navbar from '../../components/Navbar'
 import Image from 'next/image'
 import BuyButton from '../../components/BuyButton'
+import FavoriteButton from '../../components/FavoriteButton'
 import { Database } from '../../../types/supabase'
+import { getRelativeTime, typeDescriptions, conditionDescriptions } from '../../../lib/utils'
 
 type Item = Database['public']['Tables']['items']['Row']
 
@@ -94,15 +96,22 @@ export default function ItemDetailPage() {
 
           {/* Item Details */}
           <div className="space-y-6">
-            <h1 className="text-3xl font-bold">{item.title}</h1>
-            <p className="text-2xl text-green-600 font-bold">${item.price}</p>
+            <div className="flex justify-between items-start mb-4">
+              <h1 className="text-3xl font-bold">{item.title}</h1>
+              <div className="flex items-center gap-4">
+                <FavoriteButton item={item} userId={userId} />
+                <p className="text-sm text-gray-500">{getRelativeTime(item.created_at || '')}</p>
+              </div>
+            </div>
             
-            <div className="flex gap-2">
-              <span className="px-3 py-1 bg-gray-100 rounded-full text-sm">
-                {item.condition}
+            <p className="text-3xl text-green-600 font-bold mb-4">${item.price}</p>
+            
+            <div className="space-y-2 mb-6">
+              <span className="inline-block px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm mr-2">
+                {typeDescriptions[item.type]}
               </span>
-              <span className="px-3 py-1 bg-gray-100 rounded-full text-sm">
-                {item.type}
+              <span className="inline-block px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm">
+                {conditionDescriptions[item.condition]}
               </span>
             </div>
 

@@ -2,10 +2,12 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Drop existing tables if they exist
+DROP TABLE IF EXISTS spot_attendances;
 DROP TABLE IF EXISTS items;
+DROP TABLE IF EXISTS favorites;
 DROP TABLE IF EXISTS profiles;
 
--- Create profiles table
+-- Create profiles table first (since it's referenced by other tables)
 CREATE TABLE IF NOT EXISTS profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   username TEXT UNIQUE,
@@ -18,8 +20,8 @@ CREATE TABLE IF NOT EXISTS profiles (
 -- Create items table
 CREATE TABLE IF NOT EXISTS items (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  buyer_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  buyer_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
   title TEXT,
   description TEXT,
   price DECIMAL(10,2) NOT NULL,
@@ -32,9 +34,31 @@ CREATE TABLE IF NOT EXISTS items (
   updated_at TIMESTAMP WITH TIME ZONE
 );
 
+-- Create favorites table
+CREATE TABLE IF NOT EXISTS favorites (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  item_id UUID REFERENCES items(id) ON DELETE CASCADE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()),
+  UNIQUE(user_id, item_id)
+);
+
+-- Create spot_attendances table
+CREATE TABLE IF NOT EXISTS spot_attendances (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  spot_id UUID REFERENCES spots(id) ON DELETE CASCADE,
+  duration_minutes DECIMAL(4,1) NOT NULL CHECK (duration_minutes IN (0.5, 30, 60, 120, 180, 240)),
+  start_time TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()),
+  UNIQUE(user_id, spot_id)
+);
+
 -- Enable Row Level Security (RLS)
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE favorites ENABLE ROW LEVEL SECURITY;
+ALTER TABLE spot_attendances ENABLE ROW LEVEL SECURITY;
 
 -- Create policies for profiles
 CREATE POLICY "Public profiles are viewable by everyone"
@@ -49,110 +73,28 @@ CREATE POLICY "Users can update their own profile"
   ON profiles FOR UPDATE
   USING (auth.uid() = id);
 
--- Create an index for faster username lookups
-CREATE INDEX IF NOT EXISTS profiles_username_idx ON profiles(username);
-
--- Create policies for items table
-CREATE POLICY "Items are viewable by everyone"
-  ON items FOR SELECT
+-- Create policies for spot_attendances
+CREATE POLICY "Spot attendances are viewable by everyone"
+  ON spot_attendances FOR SELECT
   USING (true);
 
-CREATE POLICY "Users can create their own items"
-  ON items FOR INSERT
+CREATE POLICY "Users can add their own attendance"
+  ON spot_attendances FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
-CREATE POLICY "Users can update their own items"
-  ON items FOR UPDATE
+CREATE POLICY "Users can update their own attendance"
+  ON spot_attendances FOR UPDATE
   USING (auth.uid() = user_id);
 
-CREATE POLICY "Anyone can update items to buy them"
-  ON items FOR UPDATE
-  USING (NOT sold)
-  WITH CHECK (
-    auth.uid() IS NOT NULL AND  -- Must be logged in
-    auth.uid() != user_id AND   -- Can't buy own items
-    buyer_id = auth.uid() AND   -- Must set themselves as buyer
-    sold = true                 -- Must mark as sold
-  );
-
--- Drop existing purchase function if exists
-DROP FUNCTION IF EXISTS purchase_item(UUID, UUID, DECIMAL);
-
--- Create purchase_item function for atomic transactions
-CREATE OR REPLACE FUNCTION purchase_item(
-  p_item_id UUID,
-  p_buyer_id UUID,
-  p_amount DECIMAL
-)
-RETURNS BOOLEAN
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-DECLARE
-  v_seller_id UUID;
-  v_item_exists BOOLEAN;
-  v_sufficient_funds BOOLEAN;
-BEGIN
-  -- Check if item exists and is not sold
-  SELECT EXISTS (
-    SELECT 1 FROM items i
-    WHERE i.id = p_item_id 
-    AND NOT i.sold 
-    AND i.user_id != p_buyer_id
-  ) INTO v_item_exists;
-  
-  IF NOT v_item_exists THEN
-    RAISE EXCEPTION 'Item does not exist, is already sold, or you are the owner';
-  END IF;
-
-  -- Get seller ID
-  SELECT i.user_id INTO v_seller_id
-  FROM items i
-  WHERE i.id = p_item_id;
-
-  IF v_seller_id IS NULL THEN
-    RAISE EXCEPTION 'Seller not found';
-  END IF;
-
-  -- Check if buyer has sufficient funds
-  SELECT EXISTS (
-    SELECT 1 FROM profiles p
-    WHERE p.id = p_buyer_id
-    AND p.balance >= p_amount
-  ) INTO v_sufficient_funds;
-
-  IF NOT v_sufficient_funds THEN
-    RAISE EXCEPTION 'Insufficient funds';
-  END IF;
-
-  -- Perform the transaction
-  -- 1. Deduct from buyer
-  UPDATE profiles p
-  SET balance = p.balance - p_amount
-  WHERE p.id = p_buyer_id;
-
-  -- 2. Add to seller
-  UPDATE profiles p
-  SET balance = p.balance + p_amount
-  WHERE p.id = v_seller_id;
-
-  -- 3. Mark item as sold
-  UPDATE items i
-  SET sold = true,
-      buyer_id = p_buyer_id
-  WHERE i.id = p_item_id;
-
-  RETURN TRUE;
-
-EXCEPTION WHEN OTHERS THEN
-  RAISE WARNING 'Error in purchase_item: %', SQLERRM;
-  RAISE;
-END;
-$$;
+CREATE POLICY "Users can delete their own attendance"
+  ON spot_attendances FOR DELETE
+  USING (auth.uid() = user_id);
 
 -- Enable realtime
 ALTER PUBLICATION supabase_realtime ADD TABLE profiles;
 ALTER PUBLICATION supabase_realtime ADD TABLE items;
+ALTER PUBLICATION supabase_realtime ADD TABLE favorites;
+ALTER PUBLICATION supabase_realtime ADD TABLE spot_attendances;
 
 -- Function to handle new user creation
 CREATE OR REPLACE FUNCTION public.handle_new_user()
@@ -168,9 +110,6 @@ BEGIN
     ),
     0.00
   );
-  RETURN new;
-EXCEPTION WHEN OTHERS THEN
-  RAISE WARNING 'Error in handle_new_user: %', SQLERRM;
   RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

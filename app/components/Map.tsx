@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import Map, { MapProvider, Source, Layer } from 'react-map-gl/maplibre';
 import { supabase } from '../../lib/supabaseClient';
 import maplibregl from 'maplibre-gl';
@@ -8,6 +8,8 @@ import AddSpotModal from './AddSpotModal';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { Feature } from 'geojson';
 import SpotList from '../components/Spotlist';
+import AttendButton from './AttendButton'
+import SpotAttendance from './SpotAttendance'
 
 // 🌍 ADD THIS FUNCTION
 function getDistanceFromLatLonInMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -43,19 +45,278 @@ export default function MyMap() {
   const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null);
   const [hoveredSpot, setHoveredSpot] = useState<Spot | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [spotAddress, setSpotAddress] = useState<string>('');
   const mapRef = useRef<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [filterDistance, setFilterDistance] = useState('')
   const [filterType, setFilterType] = useState('all');
+  const [filterAttendance, setFilterAttendance] = useState('all');
+  const [spotAttendances, setSpotAttendances] = useState<{[key: string]: any[]}>({});
+  const [filterCity, setFilterCity] = useState('all');
+  const [cities, setCities] = useState<string[]>([]);
+  const [spotAddresses, setSpotAddresses] = useState<Record<string, { address: string; city: string }>>({});
+  const [cityCoordinates, setCityCoordinates] = useState<Record<string, { lat: number; lng: number }>>({});
+  const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
+
+  const attendanceFilters = [
+    { value: 'all', label: 'All Spots' },
+    { value: 'active', label: 'Currently Active' },
+    { value: 'scheduled', label: 'Has Scheduled' },
+    { value: 'popular', label: '3+ People' },
+    { value: 'empty', label: 'No Attendees' }
+  ];
+
+  const fetchSpotAttendances = async () => {
+    const { data, error } = await supabase
+      .from('spot_attendances')
+      .select('*');
+
+    if (!error && data) {
+      const attendancesBySpot: Record<string, any[]> = {};
+      
+      data.forEach(attendance => {
+        if (!attendancesBySpot[attendance.spot_id]) {
+          attendancesBySpot[attendance.spot_id] = [];
+        }
+        attendancesBySpot[attendance.spot_id].push(attendance);
+      });
+
+      console.log('Updated attendances:', attendancesBySpot); // Debug log
+      setSpotAttendances(attendancesBySpot);
+    } else {
+      console.error('Error fetching attendances:', error);
+    }
+  };
+
+  const getSpotAttendanceStatus = (spotId: string) => {
+    const attendances = spotAttendances[spotId] || [];
+    const now = new Date();
+    
+    const activeAttendances = attendances.filter(a => {
+      const startTime = new Date(a.start_time);
+      const durationInMs = (a.duration_minutes < 1 ? 0.5 : a.duration_minutes) * 60 * 1000;
+      const endTime = new Date(startTime.getTime() + durationInMs);
+      return now >= startTime && now <= endTime;
+    });
+
+    const scheduledAttendances = attendances.filter(a => {
+      const startTime = new Date(a.start_time);
+      return now < startTime;
+    });
+
+    const total = activeAttendances.length + scheduledAttendances.length;
+
+    return {
+      hasActive: activeAttendances.length > 0,
+      hasScheduled: scheduledAttendances.length > 0,
+      totalCount: total,
+      isEmpty: total === 0,
+      activeCount: activeAttendances.length,
+      scheduledCount: scheduledAttendances.length
+    };
+  };
+
+  // Add this helper function for delay
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  const getAddress = async (lat: number, lon: number, retryCount = 0): Promise<{ address: string; city: string }> => {
+    try {
+      // Try to get from localStorage cache first
+      const cacheKey = `address_${lat}_${lon}`;
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        return JSON.parse(cached);
+      }
+
+      // Add exponential backoff delay based on retry count
+      const backoffDelay = Math.min(1000 * Math.pow(2, retryCount), 10000);
+      await delay(backoffDelay);
+
+      // Create AbortController for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18`,
+          {
+            headers: {
+              'User-Agent': 'SkateSpotApp/1.0',
+              'Accept-Language': 'en'
+            },
+            signal: controller.signal
+          }
+        );
+
+        clearTimeout(timeoutId);
+
+        if (response.status === 429) { // Rate limit hit
+          if (retryCount < 3) {
+            console.log(`Rate limited, retry ${retryCount + 1} in ${backoffDelay}ms`);
+            await delay(backoffDelay);
+            return getAddress(lat, lon, retryCount + 1);
+          }
+          throw new Error('Rate limit exceeded after retries');
+        }
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        if (data.error) {
+          throw new Error(data.error);
+        }
+
+        if (data.address) {
+          const result = {
+            address: data.display_name,
+            city: data.address.city || data.address.town || data.address.village || 'Unknown'
+          };
+          
+          // Cache the result
+          localStorage.setItem(cacheKey, JSON.stringify(result));
+          return result;
+        }
+
+        return {
+          address: 'Address not found',
+          city: 'Unknown'
+        };
+      } catch (fetchError: any) {
+        clearTimeout(timeoutId);
+        throw fetchError;
+      }
+    } catch (error: any) {
+      console.error('Error fetching address:', error);
+      
+      // Retry on network errors, timeouts, or rate limits
+      if (retryCount < 3 && (
+        error instanceof TypeError || 
+        error.name === 'AbortError' ||
+        (error.message && (
+          error.message.includes('rate limit') ||
+          error.message.includes('network') ||
+          error.message.includes('timeout')
+        ))
+      )) {
+        console.log(`Retrying address fetch (${retryCount + 1}/3)`);
+        await delay(Math.min(1000 * Math.pow(2, retryCount), 10000));
+        return getAddress(lat, lon, retryCount + 1);
+      }
+
+      return {
+        address: 'Error fetching address',
+        city: 'Unknown'
+      };
+    }
+  };
+
+  // Calculate average coordinates for each city
+  const calculateCityCoordinates = (spots: Spot[], addresses: Record<string, { address: string; city: string }>) => {
+    const citySpots: Record<string, { totalLat: number; totalLng: number; count: number }> = {};
+
+    spots.forEach(spot => {
+      const city = addresses[spot.id]?.city;
+      if (city) {
+        if (!citySpots[city]) {
+          citySpots[city] = { totalLat: 0, totalLng: 0, count: 0 };
+        }
+        citySpots[city].totalLat += spot.latitude;
+        citySpots[city].totalLng += spot.longitude;
+        citySpots[city].count += 1;
+      }
+    });
+
+    const coordinates: Record<string, { lat: number; lng: number }> = {};
+    Object.entries(citySpots).forEach(([city, data]) => {
+      coordinates[city] = {
+        lat: data.totalLat / data.count,
+        lng: data.totalLng / data.count
+      };
+    });
+
+    return coordinates;
+  };
 
   const fetchSpots = async () => {
     const { data } = await supabase.from('spots').select('*');
     if (data) {
       setSpots(data as Spot[]);
+      
+      const addresses: Record<string, { address: string; city: string }> = {};
+      const citiesSet = new Set<string>();
+      
+      // Process spots in smaller batches to avoid overwhelming the API
+      const batchSize = 5;
+      for (let i = 0; i < data.length; i += batchSize) {
+        const batch = data.slice(i, i + batchSize);
+        
+        // Process each batch
+        await Promise.all(
+          batch.map(async (spot) => {
+            try {
+              const addressInfo = await getAddress(spot.latitude, spot.longitude);
+              addresses[spot.id] = addressInfo;
+              citiesSet.add(addressInfo.city);
+            } catch (error) {
+              console.error(`Error fetching address for spot ${spot.id}:`, error);
+              addresses[spot.id] = { address: 'Error fetching address', city: 'Unknown' };
+            }
+          })
+        );
+
+        // Add a delay between batches
+        if (i + batchSize < data.length) {
+          await delay(1000); // 1 second delay between batches
+        }
+      }
+      
+      setSpotAddresses(addresses);
+      setCities(Array.from(citiesSet).sort());
+
+      // Calculate and store city coordinates
+      const coordinates = calculateCityCoordinates(data as Spot[], addresses);
+      setCityCoordinates(coordinates);
     }
   };
+
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoadingAddresses(true);
+      try {
+        await fetchSpots();
+        await fetchSpotAttendances();
+      } finally {
+        setIsLoadingAddresses(false);
+      }
+    };
+    loadData();
+
+    // Set up real-time subscription for attendance changes
+    const channel = supabase
+      .channel('spot-attendances-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'spot_attendances'
+        },
+        async (payload) => {
+          console.log('Attendance change detected:', payload); // Debug log
+          await fetchSpotAttendances();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const filteredSpots = spots.filter((spot) => {
     const matchesSearch =
@@ -64,8 +325,20 @@ export default function MyMap() {
   
     const matchesType =
       filterType === 'all' || spot.type === filterType;
+
+    const matchesCity =
+      filterCity === 'all' || 
+      (spotAddresses[spot.id]?.city === filterCity);
+
+    const attendanceStatus = getSpotAttendanceStatus(spot.id);
+    const matchesAttendance = 
+      filterAttendance === 'all' ||
+      (filterAttendance === 'active' && attendanceStatus.activeCount > 0) ||
+      (filterAttendance === 'scheduled' && attendanceStatus.scheduledCount > 0) ||
+      (filterAttendance === 'popular' && attendanceStatus.totalCount >= 3) ||
+      (filterAttendance === 'empty' && attendanceStatus.totalCount === 0);
   
-    return matchesSearch && matchesType;
+    return matchesSearch && matchesType && matchesAttendance && matchesCity;
   });
   
   const sortedSpots = userLocation
@@ -149,10 +422,6 @@ export default function MyMap() {
     mapRef.current = map;
     addMarkers(map);
   };
-
-  useEffect(() => {
-    fetchSpots();
-  }, []);
 
   useEffect(() => {
     if (mapRef.current) {
@@ -274,9 +543,30 @@ export default function MyMap() {
     setSelectedSpot(spot);
   };
 
+  useEffect(() => {
+    if (selectedSpot) {
+      getAddress(selectedSpot.latitude, selectedSpot.longitude)
+        .then(address => setSpotAddress(address.address));
+    }
+  }, [selectedSpot]);
 
+  // Add handler for city filter changes
+  const handleCityChange = (city: string) => {
+    setFilterCity(city);
+    
+    if (city !== 'all' && cityCoordinates[city]) {
+      const coords = cityCoordinates[city];
+      mapRef.current?.flyTo({
+        center: [coords.lng, coords.lat],
+        zoom: 13,
+        duration: 1500
+      });
+    }
+  };
 
-  
+  // Create a memoized version of spotAttendances to ensure consistent reference
+  const memoizedSpotAttendances = useMemo(() => spotAttendances, [spotAttendances]);
+
   return (
     <div>
     <div className="relative w-full h-[70vh] overflow-hidden">
@@ -358,9 +648,29 @@ export default function MyMap() {
           />
 
           <p className="text-gray-600 mb-2">Type: {selectedSpot.type}</p>
-          <p className="text-gray-600 mb-2">
-            Lat: {selectedSpot.latitude.toFixed(5)}, Lng: {selectedSpot.longitude.toFixed(5)}
+          <p className="text-gray-600 mb-4">
+            📍 {spotAddresses[selectedSpot.id]?.address || 'Loading address...'}
           </p>
+
+          <div className="mb-6">
+            <AttendButton
+              spotId={selectedSpot.id}
+              userId={currentUserId}
+              onAttendanceChange={() => {
+                // Force a re-render of the SpotAttendance component
+                console.log('Attendance changed, refreshing sidebar...')
+                // Using a key prop to force remount of SpotAttendance
+                setSelectedSpot({...selectedSpot})
+              }}
+            />
+          </div>
+
+          <div className="border-t pt-4">
+            <SpotAttendance 
+              key={`attendance-${selectedSpot.id}-${Date.now()}`} 
+              spotId={selectedSpot.id} 
+            />
+          </div>
 
           {selectedSpot.user_id === currentUserId && (
             <button
@@ -380,10 +690,14 @@ export default function MyMap() {
   userLocation={userLocation}
   searchQuery={searchQuery}
   filterDistance={filterDistance}
-  filterType={filterType}    // <<< ADD THIS
+  filterType={filterType}
+  filterAttendance={filterAttendance}
+  filterCity={filterCity}
   setSearchQuery={setSearchQuery}
   setFilterDistance={setFilterDistance}
-  setFilterType={setFilterType}  // <<< ADD THIS
+  setFilterType={setFilterType}
+  setFilterAttendance={setFilterAttendance}
+  setFilterCity={handleCityChange}
   currentPage={currentPage}
   setCurrentPage={setCurrentPage}
   totalPages={1}
@@ -391,6 +705,10 @@ export default function MyMap() {
     mapRef.current?.flyTo({ center: [spot.longitude, spot.latitude], zoom: 15 });
     setSelectedSpot(spot);
   }}
+  spotAttendances={spotAttendances}
+  spotAddresses={spotAddresses}
+  cities={cities}
+  isLoadingAddresses={isLoadingAddresses}
 />
 
 <p className="text-center mt-4 text-sm text-gray-500">
