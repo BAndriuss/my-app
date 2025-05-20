@@ -70,9 +70,6 @@ export default function RegistrationForm({ onRegistrationSuccess }: Registration
         email,
         password,
         options: {
-          data: {
-            username: trimmedUsername
-          },
           emailRedirectTo: redirectUrl
         }
       });

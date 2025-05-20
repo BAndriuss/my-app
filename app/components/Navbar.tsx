@@ -39,36 +39,11 @@ export default function Navbar() {
             .single();
 
           if (error) {
-            // If error is 'not found', create a new profile
+            // If error is 'not found', redirect to username setup
             if (error.code === 'PGRST116') {
-              console.log('Navbar: Profile not found, creating new profile');
-              const { data: { session } } = await supabase.auth.getSession();
-              const { data: newProfile, error: createError } = await supabase
-                .from('profiles')
-                .insert([
-                  {
-                    id: userId,
-                    username: null,
-                    balance: 0,
-                    is_admin: false,
-                    email: session?.user?.email
-                  }
-                ])
-                .select()
-                .single();
-
-              if (createError) {
-                console.error('Navbar: Error creating profile:', createError);
-                throw createError;
-              }
-
-              if (newProfile) {
-                console.log('Navbar: New profile created:', newProfile);
-                setUsername(newProfile.username);
-                setBalance(newProfile.balance);
-                setIsAdmin(newProfile.is_admin);
-                return newProfile;
-              }
+              console.log('Navbar: Profile not found, redirecting to username setup');
+              router.push('/setup-username');
+              return null;
             } else {
               console.error('Navbar: Error fetching profile:', error);
               if (retries > 1) {
@@ -81,13 +56,9 @@ export default function Navbar() {
             }
           }
 
-          if (!profile) {
-            console.log('Navbar: No profile found for user:', userId);
-            if (retries > 1) {
-              await new Promise(resolve => setTimeout(resolve, 1000));
-              retries--;
-              continue;
-            }
+          if (!profile || !profile.username) {
+            console.log('Navbar: No username found, redirecting to setup');
+            router.push('/setup-username');
             return null;
           }
 
@@ -220,11 +191,11 @@ export default function Navbar() {
       setCurrentChannel(null);
 
       // Force reload to clear any cached state
-      window.location.href = '/login';
+      router.push('/login');
     } catch (err) {
       console.error('Error during logout:', err);
       // Still try to redirect even if there's an error
-      window.location.href = '/login';
+      router.push('/login');
     }
   };
 
@@ -243,7 +214,7 @@ export default function Navbar() {
           <div className="flex-1 hidden md:flex items-center justify-center">
             <div className="flex items-center space-x-6">
               <Link href="/dashboard" className="nav-link">
-                Dashboard
+                Home
               </Link>
               <Link href="/spots" className="nav-link">
                 Spots

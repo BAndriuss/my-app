@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '../../../lib/supabaseClient'
 import Navbar from '../../components/Navbar'
 import { Database } from '../../../types/supabase'
+import { typeDescriptions, conditionDescriptions } from '../../../lib/utils'
 
 type ItemType = Database['public']['Tables']['items']['Insert']
 
@@ -15,6 +16,7 @@ export default function UploadItemPage() {
   const [condition, setCondition] = useState<ItemType['condition']>('good')
   const [type, setType] = useState<ItemType['type']>('other')
   const [imageFiles, setImageFiles] = useState<File[]>([])
+  const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([])
   const [userId, setUserId] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const router = useRouter()
@@ -27,6 +29,16 @@ export default function UploadItemPage() {
 
     fetchUser()
   }, [])
+
+  // Handle image preview
+  useEffect(() => {
+    const urls = imageFiles.map(file => URL.createObjectURL(file))
+    setImagePreviewUrls(urls)
+
+    return () => {
+      urls.forEach(url => URL.revokeObjectURL(url))
+    }
+  }, [imageFiles])
 
   const handleUpload = async () => {
     // Check authentication
@@ -123,82 +135,122 @@ export default function UploadItemPage() {
   }
 
   return (
-    <>
+    <div className="min-h-screen bg-pattern-2">
       <Navbar />
-      <div className="max-w-xl mx-auto mt-10 p-6 shadow rounded border">
-        <h2 className="text-xl font-bold mb-4">Upload Item</h2>
+      <main className="main-content">
+        <div className="max-w-2xl mx-auto px-4 py-8">
+          <div className="content-overlay p-8">
+            <button
+              onClick={() => router.back()}
+              className="btn-primary bg-blue-500 hover:bg-blue-600 mb-6"
+            >
+              ← Back to Market
+            </button>
 
-        <input
-          type="text"
-          placeholder="Item title"
-          className="w-full p-2 border rounded mb-3"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-        />
+            <h1 className="heading-1 mb-6">ADD NEW ITEM</h1>
 
-        <textarea
-          placeholder="Item description"
-          className="w-full p-2 border rounded mb-3"
-          rows={4}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-        />
+            <div className="space-y-6">
+              <div>
+                <label className="block font-cornerstone text-gray-700 mb-2">TITLE</label>
+                <input
+                  type="text"
+                  placeholder="Enter item title"
+                  className="w-full p-3 border rounded-lg font-bebas text-lg bg-white/80"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                />
+              </div>
 
-        <input
-          type="number"
-          placeholder="Price"
-          className="w-full p-2 border rounded mb-3"
-          value={price}
-          min="0"
-          step="0.01"
-          onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
-        />
+              <div>
+                <label className="block font-cornerstone text-gray-700 mb-2">DESCRIPTION</label>
+                <textarea
+                  placeholder="Enter item description"
+                  className="w-full p-3 border rounded-lg font-bebas text-lg bg-white/80"
+                  rows={4}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                />
+              </div>
 
-        <select
-          className="w-full p-2 border rounded mb-3"
-          value={condition}
-          onChange={(e) => setCondition(e.target.value as ItemType['condition'])}
-        >
-          <option value="new">New</option>
-          <option value="like_new">Like New</option>
-          <option value="good">Good</option>
-          <option value="fair">Fair</option>
-          <option value="poor">Poor</option>
-        </select>
+              <div>
+                <label className="block font-cornerstone text-gray-700 mb-2">PRICE</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                  <input
+                    type="number"
+                    placeholder="0.00"
+                    className="w-full p-3 pl-8 border rounded-lg font-bebas text-lg bg-white/80"
+                    value={price}
+                    min="0"
+                    step="0.01"
+                    onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
+                  />
+                </div>
+              </div>
 
-        <select
-          className="w-full p-2 border rounded mb-3"
-          value={type}
-          onChange={(e) => setType(e.target.value as ItemType['type'])}
-        >
-          <option value="board">Board</option>
-          <option value="wheels">Wheels</option>
-          <option value="trucks">Trucks</option>
-          <option value="bearings">Bearings</option>
-          <option value="griptape">Griptape</option>
-          <option value="hardware">Hardware</option>
-          <option value="tools">Tools</option>
-          <option value="accessories">Accessories</option>
-          <option value="clothing">Clothing</option>
-          <option value="other">Other</option>
-        </select>
+              <div>
+                <label className="block font-cornerstone text-gray-700 mb-2">CONDITION</label>
+                <select
+                  className="w-full p-3 border rounded-lg font-bebas text-lg bg-white/80"
+                  value={condition}
+                  onChange={(e) => setCondition(e.target.value as ItemType['condition'])}
+                >
+                  {Object.entries(conditionDescriptions).map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+              </div>
 
-        <input
-          type="file"
-          accept="image/*"
-          multiple
-          onChange={(e) => setImageFiles(Array.from(e.target.files || []))}
-          className="w-full p-2 border rounded mb-4"
-        />
+              <div>
+                <label className="block font-cornerstone text-gray-700 mb-2">TYPE</label>
+                <select
+                  className="w-full p-3 border rounded-lg font-bebas text-lg bg-white/80"
+                  value={type}
+                  onChange={(e) => setType(e.target.value as ItemType['type'])}
+                >
+                  {Object.entries(typeDescriptions).map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+              </div>
 
-        <button
-          onClick={handleUpload}
-          disabled={uploading}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded disabled:bg-blue-400"
-        >
-          {uploading ? 'Uploading...' : 'Upload Item'}
-        </button>
-      </div>
-    </>
+              <div>
+                <label className="block font-cornerstone text-gray-700 mb-2">IMAGES</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={(e) => setImageFiles(Array.from(e.target.files || []))}
+                  className="w-full p-3 border rounded-lg font-bebas text-lg bg-white/80"
+                />
+                <p className="description-text text-gray-500 mt-1">Upload up to 5 images (max 5MB each)</p>
+
+                {imagePreviewUrls.length > 0 && (
+                  <div className="grid grid-cols-5 gap-2 mt-4">
+                    {imagePreviewUrls.map((url, index) => (
+                      <div key={url} className="relative aspect-square">
+                        <img
+                          src={url}
+                          alt={`Preview ${index + 1}`}
+                          className="w-full h-full object-cover rounded-lg"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={handleUpload}
+                disabled={uploading}
+                className="btn-primary w-full py-4 text-lg"
+              >
+                {uploading ? 'Uploading...' : 'List Item for Sale'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
   )
 }

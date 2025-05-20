@@ -37,7 +37,7 @@ export default function DashboardPage() {
         <div className="max-w-4xl mx-auto px-8">
           <div className="content-overlay p-8">
             <div className="mb-8">
-              <h1 className="heading-1 mb-4">WELCOME TO YOUR DASHBOARD</h1>
+              <h1 className="heading-1 mb-4">WELCOME TO SKATEBOARDING COMMUNITY PLATFORM</h1>
               <p className="description-text mb-6">Logged in as: <span className="font-cornerstone">{userEmail}</span></p>
             </div>
             

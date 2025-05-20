@@ -43,8 +43,51 @@ export default function AuthCallbackPage() {
           expires_at: session.expires_at
         });
 
-        // Successfully authenticated, redirect to dashboard
-        console.log('Redirecting to dashboard...');
+        // Check if user has a profile
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('id', session.user.id)
+          .single();
+
+        // If no profile exists, create one with null username
+        if (profileError?.code === 'PGRST116') {
+          console.log('No profile exists, creating one...');
+          const { error: createError } = await supabase
+            .from('profiles')
+            .insert([
+              {
+                id: session.user.id,
+                username: null,
+                balance: 0,
+                is_admin: false
+              }
+            ]);
+
+          if (createError) {
+            console.error('Error creating profile:', createError);
+            router.push('/login?error=profile_creation_error');
+            return;
+          }
+
+          console.log('Profile created, redirecting to username setup...');
+          router.push('/setup-username');
+          return;
+        } else if (profileError) {
+          console.error('Error checking profile:', profileError);
+          router.push('/login?error=profile_error');
+          return;
+        }
+
+        // If profile exists but no username is set
+        if (!profile?.username) {
+          console.log('No username set, redirecting to setup...');
+          router.push('/setup-username');
+          return;
+        }
+
+        // Successfully authenticated and has username, redirect to dashboard
+        console.log('Profile complete, redirecting to dashboard...');
         router.push('/dashboard');
       } catch (error) {
         console.error('Unexpected error in callback:', error);

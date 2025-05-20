@@ -104,10 +104,7 @@ BEGIN
   VALUES (
     new.id,
     new.email,
-    COALESCE(
-      new.raw_user_meta_data->>'username',
-      split_part(new.email, '@', 1)  -- Fallback to email prefix if no username
-    ),
+    NULL,  -- Always set username to NULL initially
     0.00
   );
   RETURN new;
