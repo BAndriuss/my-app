@@ -18,6 +18,7 @@ export default function AddSpotModal({
   const [type, setType] = useState('skatepark')
   const [file, setFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -112,14 +113,42 @@ export default function AddSpotModal({
 
       if (error) throw error
 
-      onAdded()
-      onClose()
+      setSubmitted(true)
     } catch (error) {
       console.error('Error saving spot:', error)
       alert('Error saving spot. Please try again.')
     } finally {
       setUploading(false)
     }
+  }
+
+  if (submitted) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 backdrop-blur-sm">
+        <div className="bg-white p-6 rounded-lg shadow-md max-w-md w-full relative">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold mb-4">Spot Submitted Successfully!</h2>
+            <p className="text-gray-600 mb-4">
+              Your spot "{title}" has been submitted and is pending approval.
+              Our team will review it shortly to ensure it meets our guidelines.
+            </p>
+            <p className="text-gray-600 mb-6">
+              You'll be able to see your spot on the map once it's approved.
+              This usually takes 24-48 hours.
+            </p>
+            <button
+              onClick={() => {
+                onAdded()
+                onClose()
+              }}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-semibold"
+            >
+              Got it!
+            </button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (

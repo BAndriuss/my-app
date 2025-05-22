@@ -7,6 +7,7 @@ import Link from 'next/link'
 import Slider from 'react-slick'
 import 'slick-carousel/slick/slick.css'
 import 'slick-carousel/slick/slick-theme.css'
+import { getRelativeTime, typeDescriptions, conditionDescriptions } from '../../lib/utils'
 
 interface MarketItem {
   id: string
@@ -239,7 +240,7 @@ export default function RecentActivities() {
               {marketItems.map((item) => (
                 <div key={item.id} className="px-2">
                   <Link href={`/market/${item.id}`}>
-                    <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow h-[350px] flex flex-col">
+                    <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow h-[400px] flex flex-col">
                       <div className="relative w-full h-48 flex-shrink-0">
                         {item.main_image_url ? (
                           <>
@@ -247,11 +248,13 @@ export default function RecentActivities() {
                               src={item.main_image_url}
                               alt={item.title}
                               fill
-                              className="object-cover rounded-t-lg"
+                              className={`object-cover rounded-t-lg ${item.sold ? 'opacity-70' : ''}`}
                             />
                             {item.sold && (
-                              <div className="absolute top-4 right-4 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-semibold shadow-md">
-                                SOLD
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="bg-red-500 text-white px-6 py-2 rounded-full text-xl font-bold transform rotate-[-20deg] shadow-lg">
+                                  SOLD
+                                </div>
                               </div>
                             )}
                           </>
@@ -262,13 +265,28 @@ export default function RecentActivities() {
                         )}
                       </div>
                       <div className="p-4 flex flex-col flex-grow">
-                        <h3 className="font-cornerstone text-lg truncate">{item.title}</h3>
-                        <p className="text-sm text-gray-600 line-clamp-2 mb-2 flex-grow">{item.description}</p>
-                        <div className="flex justify-between items-center">
-                          <p className="text-green-600 font-bold">${item.price}</p>
-                          <p className="text-sm text-gray-500">{item.condition}</p>
+                        <div className="flex justify-between items-start mb-2">
+                          <p className="text-2xl font-cornerstone text-green-600">${item.price}</p>
+                          <div className="flex flex-col items-end">
+                            <p className="description-text text-gray-500">{getRelativeTime(item.created_at || '')}</p>
+                            {item.sold && (
+                              <p className="text-red-500 text-sm font-semibold">Item no longer available</p>
+                            )}
+                          </div>
                         </div>
-                        <p className="text-xs text-gray-400 mt-2">{formatTimeAgo(item.created_at)}</p>
+                        <h2 className="card-title truncate">{item.title}</h2>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="description-text px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
+                              {typeDescriptions[item.type]}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="description-text px-2 py-1 bg-gray-100 text-gray-800 rounded-full">
+                              {conditionDescriptions[item.condition]}
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </Link>
@@ -339,6 +357,7 @@ export default function RecentActivities() {
           align-items: stretch;
           margin-left: 0;
           margin-right: 0;
+          padding-bottom: 40px;
         }
         .slick-slide {
           height: inherit !important;
@@ -350,7 +369,7 @@ export default function RecentActivities() {
           }
         }
         .slick-dots {
-          bottom: -35px;
+          bottom: 0px;
         }
         .slick-dots li button:before {
           font-size: 12px;

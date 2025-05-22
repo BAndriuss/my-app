@@ -17,6 +17,7 @@ type Item = Database['public']['Tables']['items']['Row']
 
 export default function MarketPage() {
   const [items, setItems] = useState<Item[]>([])
+  const [favorites, setFavorites] = useState<Item[]>([])
   const [userId, setUserId] = useState<string | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [selectedItem, setSelectedItem] = useState<Item | null>(null)
@@ -49,11 +50,40 @@ export default function MarketPage() {
     }
   }
 
-  useEffect(() => {
-    fetchItems()
+  // Fetch favorites
+  const fetchFavorites = async () => {
+    if (!userId) return;
+    
+    const { data: favoritesData, error: favoritesError } = await supabase
+      .from('favorites')
+      .select('item_id');
 
-    // Set up real-time subscription for items
-    const channel = supabase
+    if (favoritesError || !favoritesData) return;
+
+    const itemIds = favoritesData.map(f => f.item_id);
+    
+    if (itemIds.length === 0) {
+      setFavorites([]);
+      return;
+    }
+
+    const { data: itemsData, error: itemsError } = await supabase
+      .from('items')
+      .select('*')
+      .in('id', itemIds);
+
+    if (!itemsError && itemsData) {
+      setFavorites(itemsData);
+    }
+  };
+
+  // Update useEffect to include favorites subscription
+  useEffect(() => {
+    fetchItems();
+    fetchFavorites();
+
+    // Set up real-time subscription for items and favorites
+    const itemsChannel = supabase
       .channel('market-changes')
       .on(
         'postgres_changes',
@@ -63,15 +93,32 @@ export default function MarketPage() {
           table: 'items'
         },
         () => {
-          fetchItems()
+          fetchItems();
+          fetchFavorites();
         }
       )
-      .subscribe()
+      .subscribe();
+
+    const favoritesChannel = supabase
+      .channel('favorites-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'favorites'
+        },
+        () => {
+          fetchFavorites();
+        }
+      )
+      .subscribe();
 
     return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [])
+      supabase.removeChannel(itemsChannel);
+      supabase.removeChannel(favoritesChannel);
+    };
+  }, [userId]);
 
   const openModal = (item: Item) => {
     setSelectedItem(item)
@@ -190,40 +237,159 @@ export default function MarketPage() {
                   </div>
                 </div>
 
-                {/* Items Grid */}
+                {/* Main Content Area */}
                 <div className="flex-1">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredAndSortedItems.map((item) => (
-                      <div
-                        key={item.id}
-                        className="bg-white/80 backdrop-blur-sm rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-200"
-                      >
-                        <div className="relative">
-                          <div 
-                            onClick={() => router.push(`/market/${item.id}`)}
-                            className="cursor-pointer"
+                  {/* Favorites Section */}
+                  {userId && favorites.length > 0 && (
+                    <div className="mb-8">
+                      <h2 className="heading-2 mb-4">MY FAVORITES</h2>
+                      <div className="h-[450px] overflow-y-auto pr-4">
+                        <div className="grid grid-cols-3 gap-6 auto-rows-min">
+                          {favorites.map((item) => (
+                            <div
+                              key={item.id}
+                              className="bg-white/80 backdrop-blur-sm rounded-lg overflow-hidden hover:shadow-lg transition-shadow h-[450px] flex flex-col"
+                            >
+                              <div className="relative h-48">
+                                <div 
+                                  onClick={() => router.push(`/market/${item.id}`)}
+                                  className="cursor-pointer"
+                                >
+                                  <div className="relative h-48">
+                                    <Image
+                                      src={item.main_image_url}
+                                      alt={item.title ?? 'Item image'}
+                                      fill
+                                      className={`object-cover ${item.sold ? 'opacity-70' : ''}`}
+                                    />
+                                    {item.images.length > 1 && (
+                                      <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 description-text text-white px-2 py-1 rounded">
+                                        +{item.images.length - 1} more
+                                      </div>
+                                    )}
+                                    {item.sold && (
+                                      <div className="absolute inset-0 flex items-center justify-center">
+                                        <div className="bg-red-500 text-white px-6 py-2 rounded-full text-xl font-bold transform rotate-[-20deg] shadow-lg">
+                                          SOLD
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Favorite button positioned absolutely */}
+                                <div className="absolute top-2 right-2 z-10">
+                                  <FavoriteButton item={item} userId={userId} />
+                                </div>
+                              </div>
+
+                              <div className="p-4 flex flex-col flex-grow">
+                                <div className="flex justify-between items-start mb-2">
+                                  <p className="text-2xl font-cornerstone text-green-600">${item.price}</p>
+                                  <div className="flex flex-col items-end">
+                                    <p className="description-text text-gray-500">{getRelativeTime(item.created_at || '')}</p>
+                                    {item.sold && (
+                                      <p className="text-red-500 text-sm font-semibold">Item no longer available</p>
+                                    )}
+                                  </div>
+                                </div>
+                                <h2 className="card-title truncate">{item.title}</h2>
+                                <div className="space-y-1 mb-4">
+                                  <div className="flex items-center gap-2">
+                                    <span className="description-text px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
+                                      {typeDescriptions[item.type]}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="description-text px-2 py-1 bg-gray-100 text-gray-800 rounded-full">
+                                      {conditionDescriptions[item.condition]}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Action buttons */}
+                                <div className="mt-auto">
+                                  {item.user_id === userId ? (
+                                    !item.sold && (
+                                      <button
+                                        onClick={() => openModal(item)}
+                                        className="btn-primary bg-yellow-500 hover:bg-yellow-600 w-full"
+                                      >
+                                        Edit
+                                      </button>
+                                    )
+                                  ) : (
+                                    !item.sold && <BuyButton item={item} onPurchaseComplete={fetchItems} />
+                                  )}
+                                  {item.sold && (
+                                    <div className="text-center text-red-500 font-semibold py-2 bg-red-50 rounded">
+                                      Sold
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Items Grid */}
+                  <div>
+                    <h2 className="heading-2 mb-4">ALL ITEMS</h2>
+                    <div className="h-[800px] overflow-y-auto pr-4">
+                      <div className="grid grid-cols-3 gap-6 auto-rows-min">
+                        {filteredAndSortedItems.map((item) => (
+                          <div
+                            key={item.id}
+                            className="bg-white/80 backdrop-blur-sm rounded-lg overflow-hidden hover:shadow-lg transition-shadow h-[450px] flex flex-col"
                           >
                             <div className="relative h-48">
-                              <Image
-                                src={item.main_image_url}
-                                alt={item.title ?? 'Item image'}
-                                fill
-                                className="object-cover"
-                              />
-                              {item.images.length > 1 && (
-                                <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 description-text text-white px-2 py-1 rounded">
-                                  +{item.images.length - 1} more
+                              <div 
+                                onClick={() => router.push(`/market/${item.id}`)}
+                                className="cursor-pointer"
+                              >
+                                <div className="relative h-48">
+                                  <Image
+                                    src={item.main_image_url}
+                                    alt={item.title ?? 'Item image'}
+                                    fill
+                                    className={`object-cover ${item.sold ? 'opacity-70' : ''}`}
+                                  />
+                                  {item.images.length > 1 && (
+                                    <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 description-text text-white px-2 py-1 rounded">
+                                      +{item.images.length - 1} more
+                                    </div>
+                                  )}
+                                  {item.sold && (
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                      <div className="bg-red-500 text-white px-6 py-2 rounded-full text-xl font-bold transform rotate-[-20deg] shadow-lg">
+                                        SOLD
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
-                              )}
+                              </div>
+
+                              {/* Favorite button positioned absolutely */}
+                              <div className="absolute top-2 right-2 z-10">
+                                <FavoriteButton item={item} userId={userId} />
+                              </div>
                             </div>
 
-                            <div className="p-4">
+                            <div className="p-4 flex flex-col flex-grow">
                               <div className="flex justify-between items-start mb-2">
                                 <p className="text-2xl font-cornerstone text-green-600">${item.price}</p>
-                                <p className="description-text text-gray-500">{getRelativeTime(item.created_at || '')}</p>
+                                <div className="flex flex-col items-end">
+                                  <p className="description-text text-gray-500">{getRelativeTime(item.created_at || '')}</p>
+                                  {item.sold && (
+                                    <p className="text-red-500 text-sm font-semibold">Item no longer available</p>
+                                  )}
+                                </div>
                               </div>
-                              <h2 className="card-title">{item.title}</h2>
-                              <div className="space-y-1">
+                              <h2 className="card-title truncate">{item.title}</h2>
+                              <div className="space-y-1 mb-4">
                                 <div className="flex items-center gap-2">
                                   <span className="description-text px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
                                     {typeDescriptions[item.type]}
@@ -235,32 +401,32 @@ export default function MarketPage() {
                                   </span>
                                 </div>
                               </div>
+
+                              {/* Action buttons */}
+                              <div className="mt-auto">
+                                {item.user_id === userId ? (
+                                  !item.sold && (
+                                    <button
+                                      onClick={() => openModal(item)}
+                                      className="btn-primary bg-yellow-500 hover:bg-yellow-600 w-full"
+                                    >
+                                      Edit
+                                    </button>
+                                  )
+                                ) : (
+                                  !item.sold && <BuyButton item={item} onPurchaseComplete={fetchItems} />
+                                )}
+                                {item.sold && (
+                                  <div className="text-center text-red-500 font-semibold py-2 bg-red-50 rounded">
+                                    Sold
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
-
-                          {/* Favorite button positioned absolutely */}
-                          <div className="absolute top-2 right-2 z-10">
-                            <FavoriteButton item={item} userId={userId} />
-                          </div>
-                        </div>
-
-                        {/* Action buttons */}
-                        <div className="px-4 pb-4">
-                          {item.user_id === userId ? (
-                            !item.sold && (
-                              <button
-                                onClick={() => openModal(item)}
-                                className="btn-primary bg-yellow-500 hover:bg-yellow-600 w-full"
-                              >
-                                Edit
-                              </button>
-                            )
-                          ) : (
-                            <BuyButton item={item} onPurchaseComplete={fetchItems} />
-                          )}
-                        </div>
+                        ))}
                       </div>
-                    ))}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -274,7 +440,10 @@ export default function MarketPage() {
         <EditItemModal
           item={selectedItem}
           onClose={closeModal}
-          onUpdated={fetchItems}
+          onUpdated={() => {
+            fetchItems();
+            fetchFavorites();
+          }}
         />
       )}
     </div>

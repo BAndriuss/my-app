@@ -11,6 +11,7 @@ import SpotList from '../components/Spotlist';
 import AttendButton from './AttendButton'
 import SpotAttendance from './SpotAttendance'
 import DeleteButton from './DeleteButton';
+import CommentSection from './CommentSection';
 
 // 🌍 ADD THIS FUNCTION
 function getDistanceFromLatLonInMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -39,6 +40,7 @@ interface Spot {
   longitude: number;
   image_url: string | null;
   is_approved: boolean;
+  created_at: string;
 }
 
 export default function MyMap() {
@@ -697,8 +699,11 @@ export default function MyMap() {
           />
 
           <p className="text-gray-600 mb-2">Type: {selectedSpot.type}</p>
-          <p className="text-gray-600 mb-4">
+          <p className="text-gray-600 mb-2">
             📍 {spotAddresses[selectedSpot.id]?.address || 'Loading address...'}
+          </p>
+          <p className="text-gray-600 mb-4">
+            Added: {new Date(selectedSpot.created_at).toLocaleDateString()}
           </p>
 
           <div className="mb-6">
@@ -709,7 +714,7 @@ export default function MyMap() {
                 // Force a re-render of the SpotAttendance component
                 console.log('Attendance changed, refreshing sidebar...')
                 // Using a key prop to force remount of SpotAttendance
-                setSelectedSpot({...selectedSpot, is_approved: selectedSpot.is_approved})
+                setSelectedSpot({...selectedSpot, is_approved: selectedSpot.is_approved, created_at: selectedSpot.created_at})
               }}
             />
           </div>
@@ -721,8 +726,22 @@ export default function MyMap() {
             />
           </div>
 
+          <CommentSection 
+            spotId={selectedSpot.id}
+            currentUserId={currentUserId}
+          />
+
           {(currentUserId === selectedSpot.user_id || isAdmin) && (
-            <div className="mt-4">
+            <div className="mt-4 space-y-2 w-[270px]">
+              <button
+                onClick={() => {
+                  // TODO: Implement edit functionality
+                  alert('Edit functionality coming soon!')
+                }}
+                className="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-2 rounded font-semibold"
+              >
+                Edit Spot
+              </button>
               <DeleteButton
                 onDelete={handleDeleteSpot}
                 itemName="spot"
