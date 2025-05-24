@@ -222,6 +222,9 @@ export default function Navbar() {
               <Link href="/market" className="nav-link">
                 Market
               </Link>
+              <Link href="/tournaments" className="nav-link">
+                Tournaments
+              </Link>
               <Link href="/myaccount/favorites" className="nav-link">
                 Favorites
               </Link>

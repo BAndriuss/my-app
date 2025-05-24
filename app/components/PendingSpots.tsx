@@ -27,6 +27,7 @@ export default function PendingSpots({ onSpotApproved }: PendingSpotsProps) {
   const [success, setSuccess] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const spotsPerPage = 5
+  const [selectedImage, setSelectedImage] = useState<string | null>(null)
 
   const fetchPendingSpots = async () => {
     setLoading(true)
@@ -201,11 +202,21 @@ export default function PendingSpots({ onSpotApproved }: PendingSpotsProps) {
                   Location: {spot.latitude.toFixed(6)}, {spot.longitude.toFixed(6)}
                 </p>
                 {spot.image_url && (
-                  <img
-                    src={spot.image_url}
-                    alt={spot.title}
-                    className="mt-2 w-32 h-32 object-cover rounded"
-                  />
+                  <div 
+                    className="relative mt-2 w-32 h-32 group cursor-pointer"
+                    onClick={() => setSelectedImage(spot.image_url)}
+                  >
+                    <img
+                      src={spot.image_url}
+                      alt={spot.title}
+                      className="w-full h-full object-cover rounded-lg"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 rounded-lg">
+                      <svg className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-all duration-200" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  </div>
                 )}
               </div>
               <div className="flex space-x-4">
@@ -221,6 +232,29 @@ export default function PendingSpots({ onSpotApproved }: PendingSpotsProps) {
             </div>
           </div>
         ))
+      )}
+
+      {selectedImage && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
+          onClick={() => setSelectedImage(null)}
+        >
+          <div className="max-w-4xl w-full mx-4" onClick={e => e.stopPropagation()}>
+            <div className="relative">
+              <button 
+                onClick={() => setSelectedImage(null)}
+                className="absolute -top-10 right-0 text-white hover:text-gray-300"
+              >
+                Close
+              </button>
+              <img
+                src={selectedImage}
+                alt="Spot"
+                className="w-full rounded-lg"
+              />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
